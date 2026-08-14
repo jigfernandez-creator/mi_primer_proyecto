@@ -1,0 +1,32 @@
+name: Tests del Bot
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar el código
+      uses: actions/checkout@v4
+      
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        
+    - name: Instalar dependencias (Librerías y Tkinter)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk
+        python -m pip install --upgrade pip
+        pip install websockets coverage
+        
+    - name: Correr tests y mostrar Coverage
+      run: |
+        coverage run --omit="interfaz.py" -m unittest test_codigobot.py
+        coverage report -m --omit="interfaz.py"
