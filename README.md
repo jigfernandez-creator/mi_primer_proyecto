@@ -1,10 +1,3 @@
-¡Acá tenés, Juano! Un `README.md` es fundamental para que tu proyecto destaque. Armé este documento con una estructura súper profesional. Destaca los algoritmos que implementaste, la interfaz gráfica y tu excelente cobertura de tests.
-
-Copiá todo el bloque de texto que está acá abajo, creá un archivo llamado `README.md` en tu repositorio de GitHub (podés hacerlo con el botón "Add file" en la web) y pegalo ahí adentro.
-
----
-
-```markdown
 # 🐍 Snake Bot - Code Challenge
 
 Un bot automatizado y altamente competitivo desarrollado en Python para el torneo de WebSockets de Code Challenge. Este bot no solo busca comida de forma eficiente, sino que analiza el entorno para predecir y evadir los movimientos enemigos en tiempo real.
