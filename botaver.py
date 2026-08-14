@@ -12,7 +12,6 @@ from interfaz import iniciar_interfaz_multitab
 juegos_en_vivo = {}
 
 def obtener_datos_partidas():
-    """El visualizador llama a esta función para dibujar lo que pasa."""
     return juegos_en_vivo
 # ------------------------------------
 
@@ -25,7 +24,7 @@ def get_snake_length(board, side):
     return sum(1 for row in board for cell in row if cell in (head_char, body_char))
 
 def get_enemy_threats(board, my_side):
-    """NUEVO: Detecta las casillas que el enemigo puede pisar en el próximo turno."""
+    """Detecta las casillas que el enemigo puede pisar en el próximo turno."""
     enemy_head = 'B' if my_side == 'A' else 'A'
     threats = set()
     for r in range(len(board)):
@@ -37,8 +36,9 @@ def get_enemy_threats(board, my_side):
                         threats.add((nr, nc))
     return threats
 
-def flood_fill(board, start_r, start_c, threats):
-    """Cuenta el espacio libre esquivando las zonas amenazadas por el enemigo."""
+def flood_fill(board, start_r, start_c, threats=None):
+    if threats is None:
+        threats = set()
     if not (0 <= start_r < len(board) and 0 <= start_c < len(board[0])): return 0
     if board[start_r][start_c] not in (' ', '*'): return 0
     
@@ -58,8 +58,9 @@ def flood_fill(board, start_r, start_c, threats):
                         queue.append((nr, nc))
     return count
 
-def bfs_to_food(board, start_r, start_c, threats):
-    """Busca comida, pero descarta rutas que pasen por la zona de peligro enemigo."""
+def bfs_to_food(board, start_r, start_c, threats=None):
+    if threats is None:
+        threats = set()
     queue = deque([(start_r, start_c, [])])
     visited = set([(start_r, start_c)])
     
@@ -71,7 +72,7 @@ def bfs_to_food(board, start_r, start_c, threats):
             nr, nc = r + dr, c + dc
             if 0 <= nr < len(board) and 0 <= nc < len(board[0]):
                 if (nr, nc) not in visited and board[nr][nc] in (' ', '*'):
-                    if (nr, nc) not in threats:  # No nos arriesgamos a ser cortados
+                    if (nr, nc) not in threats:
                         visited.add((nr, nc))
                         queue.append((nr, nc, path + [move]))
     return None
@@ -88,7 +89,7 @@ def choose_direction(board_str, side):
     if head_r == -1: return "up"
     
     my_length = get_snake_length(board, side)
-    threats = get_enemy_threats(board, side)  # Activamos el radar de peligro
+    threats = get_enemy_threats(board, side) 
     
     directions = {"up": (head_r - 1, head_c), "down": (head_r + 1, head_c), "left": (head_r, head_c - 1), "right": (head_r, head_c + 1)}
     
@@ -97,16 +98,19 @@ def choose_direction(board_str, side):
         if 0 <= r < len(board) and 0 <= c < len(board[0]):
             if board[r][c] in (' ', '*'):
                 if (r, c) in threats:
-                    move_spaces[move] = 1 # Si es lava, le damos valor 1 (solo se usa si no hay de otra)
+                    move_spaces[move] = 0 # Valor 0 si es lava enemiga
                 else:
                     move_spaces[move] = flood_fill(board, r, c, threats)
                     
-    if not move_spaces: return "up"
+    # Si de verdad no hay ninguna jugada sin amenazas, chocamos irremediablemente
+    if not move_spaces or max(move_spaces.values()) == 0: 
+        return "up"
     
     max_space = max(move_spaces.values())
     food_move = bfs_to_food(board, head_r, head_c, threats)
     
-    if food_move and food_move in move_spaces:
+    # Solo va por la comida si el movimiento inicial hacia ella NO es una amenaza (su espacio es > 0)
+    if food_move and food_move in move_spaces and move_spaces[food_move] > 0:
         espacio_hacia_comida = move_spaces[food_move]
         if espacio_hacia_comida >= min(my_length, 8) or espacio_hacia_comida == max_space:
             return food_move
@@ -132,7 +136,6 @@ async def process_message(websocket, message):
         board = event_data.get("board")
         side = event_data.get("side")
         
-        # --- ENVIAR DATOS A LA INTERFAZ ---
         player_1 = event_data.get("player_1", "P1")
         player_2 = event_data.get("player_2", "P2")
         score_1 = event_data.get("score_1", 0)
@@ -144,18 +147,17 @@ async def process_message(websocket, message):
             "marcador": f"{player_1} ({score_1}) vs {player_2} ({score_2})",
             "game_over": False
         }
-        
-        direction = choose_direction(board, side)
 
+        direction = choose_direction(board, side)
         response = {"action": "move", "data": {"game_id": game_id, "turn_token": turn_token, "direction": direction}}
         await websocket.send(json.dumps(response))
+        print(f"[+] Turno enviado: {direction} | Juego: {game_id}")
 
     elif event == "game_over":
         game_id = event_data.get("game_id")
         winner = event_data.get("winner", "Empate/Ninguno")
         print(f"[!] Juego terminado. Ganador: {winner}")
         
-        # --- AVISAR A LA INTERFAZ QUE TERMINÓ ---
         if game_id in juegos_en_vivo:
             juegos_en_vivo[game_id]["game_over"] = True
             juegos_en_vivo[game_id]["marcador"] += f"  -> GANÓ: {winner}"
@@ -181,9 +183,6 @@ if __name__ == "__main__":
         
     token = sys.argv[1]
     
-    # 1. Arrancar la interfaz gráfica en un hilo secundario
     ui_thread = threading.Thread(target=iniciar_interfaz_multitab, args=(obtener_datos_partidas,), daemon=True)
     ui_thread.start()
-    
-    # 2. Arrancar tu bot normalmente
     asyncio.run(main_bot(token))
