@@ -166,7 +166,8 @@ async def process_message(websocket, message):
         print(f"[X] Error del servidor: {event_data}")
 
 async def main_bot(token):
-    uri = f"wss://codechallenge-server.up.railway.app:443/ws?token={token}"
+    # URL actualizada del servidor de WebSockets
+    uri = f"wss://server.codechallenge.net.ar/ws?token={token}"
     print(f"Conectando al servidor con token...")
     try:
         async with websockets.connect(uri) as websocket:
@@ -178,7 +179,7 @@ async def main_bot(token):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python codigobot.py <TU_BOT_TOKEN>")
+        print("Uso: python botaver.py <TU_BOT_TOKEN>")
         sys.exit(1)
         
     token = sys.argv[1]
