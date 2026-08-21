@@ -109,10 +109,10 @@ def choose_direction(board_str, side):
     max_space = max(move_spaces.values())
     food_move = bfs_to_food(board, head_r, head_c, threats)
     
-    # Solo va por la comida si el movimiento inicial hacia ella NO es una amenaza (su espacio es > 0)
+    # LÓGICA CORREGIDA: Exigimos espacio para toda nuestra longitud
     if food_move and food_move in move_spaces and move_spaces[food_move] > 0:
         espacio_hacia_comida = move_spaces[food_move]
-        if espacio_hacia_comida >= min(my_length, 8) or espacio_hacia_comida == max_space:
+        if espacio_hacia_comida > my_length or espacio_hacia_comida == max_space:
             return food_move
             
     best_survival_moves = [m for m, space in move_spaces.items() if space == max_space]
@@ -166,7 +166,6 @@ async def process_message(websocket, message):
         print(f"[X] Error del servidor: {event_data}")
 
 async def main_bot(token):
-    # URL actualizada del servidor de WebSockets
     uri = f"wss://server.codechallenge.net.ar/ws?token={token}"
     print(f"Conectando al servidor con token...")
     try:
